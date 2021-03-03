@@ -20,7 +20,7 @@ export default (sequelize: Sequelize): ModelDefined<ProductAttributes, ProductCr
         },
         price: {
             type: DataTypes.FLOAT,
-            allowNull: true,
+            allowNull: false,
         }
     })
 }

@@ -1,9 +1,5 @@
 import {DataTypes, ModelDefined, Sequelize} from "sequelize";
-import {
-    BasketItemAttributes,
-    BasketItemCreationAttributes,
-    BasketItemInstance,
-} from "./types";
+import {BasketItemAttributes, BasketItemCreationAttributes, BasketItemInstance,} from "./types";
 import {Product, User} from "./index";
 
 
@@ -17,6 +13,7 @@ export default (sequelize: Sequelize): ModelDefined<BasketItemAttributes, Basket
         },
         userId: {
             type: DataTypes.INTEGER,
+            allowNull: false,
             references: {
                 model: User,
                 key: 'id'
@@ -24,6 +21,7 @@ export default (sequelize: Sequelize): ModelDefined<BasketItemAttributes, Basket
         },
         productId: {
             type: DataTypes.INTEGER,
+            allowNull: false,
             references: {
                 model: Product,
                 key: 'id'
@@ -34,7 +32,9 @@ export default (sequelize: Sequelize): ModelDefined<BasketItemAttributes, Basket
             defaultValue: 1
         }
     });
-    BasketItem.hasOne(Product, {sourceKey: 'id'});
+
+    BasketItem.belongsTo(Product, {foreignKey: 'productId'});
+    BasketItem.belongsTo(User, {foreignKey: 'userId'});
 
     return BasketItem;
 }

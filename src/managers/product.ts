@@ -1,5 +1,6 @@
 import {Product} from "../models";
-import {ProductCreationAttributes} from "../models/types";
+import {ProductAttributes, ProductCreationAttributes} from "../models/types";
+import {resourceLimits} from "worker_threads";
 
 
 export class ProductManager{
@@ -9,20 +10,22 @@ export class ProductManager{
         this.model = modal
     }
 
-    async create(attributes: ProductCreationAttributes){
-        return await this.model.create(attributes);
+    async create(attributes: ProductCreationAttributes): Promise<ProductAttributes>{
+        const product = await this.model.create(attributes);
+        // @ts-ignore
+        return product.toJSON();
     }
 
-    async getById(id: number){
+    async getById(id: number): Promise<ProductAttributes>{
         const product = await this.model.findByPk(id);
-        if (!product){
-            throw 'ProgrammingError'
-        }
-        return product
+        // @ts-ignore
+        return product.toJSON();
     }
 
-    async all(){
-        return await this.model.findAll();
+    async allWithLimit(limit: number = 10, offset: number = 0): Promise<Array<ProductAttributes>>{
+        const queryset = await this.model.findAll({limit: limit});
+        // @ts-ignore
+        return queryset.map((instance) => instance.toJSON());
     }
 }
 

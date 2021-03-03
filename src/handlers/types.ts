@@ -3,7 +3,7 @@ import {UserAttributes, UserCreationAttributes} from "../models/types";
 import {Model} from "sequelize";
 
 export interface BotTgContext extends Context{
-    user: Model<UserAttributes, UserCreationAttributes>
+    user: UserAttributes
 }
 
 export interface HandlerInterface{

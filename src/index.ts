@@ -1,7 +1,12 @@
 import {sequelize} from "./models";
 import {Telegraf} from "telegraf";
 import configs from "./configs";
-import {addToBasketFactory, productListFactory, startFactory} from "./handlers/handlers";
+import {
+	addToBasketFactory,
+	basketListFactory,
+	issueOrderFactory,
+	startFactory
+} from "./handlers/handlers";
 import{AuthMiddlewareFactory} from "./middlewares/auth";
 import {BotTgContext} from "./handlers/types";
 import {TGHandler} from "./handlers/base";
@@ -20,10 +25,12 @@ async function initDb() {
 async function initBot() {
 	const bot = new Telegraf<BotTgContext>(configs.BOT_TOKEN);
 	bot.use(async (ctx: BotTgContext, next: (ctx: BotTgContext) => {}) =>
-		AuthMiddlewareFactory.create().execute(ctx, next))
+		AuthMiddlewareFactory.create().execute(ctx, next));
+
 	bot.command('start', TGHandler.asHandler(startFactory));
-	bot.action(/addToBasket/, TGHandler.asHandler(productListFactory));
-	bot.action(/goToBasket/, TGHandler.asHandler(addToBasketFactory));
+	bot.action(/addToBasket/, TGHandler.asHandler(addToBasketFactory));
+	bot.action(/goToBasket/, TGHandler.asHandler(basketListFactory));
+	bot.action(/issueOrder/, TGHandler.asHandler(issueOrderFactory))
 	await bot.launch();
 }
 

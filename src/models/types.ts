@@ -15,7 +15,7 @@ export interface ProductAttributes {
     id: number
     name: string
     description: string | null
-    price: number | null
+    price: number
 }
 export interface ProductCreationAttributes extends Optional<ProductAttributes, 'id'>{}
 
@@ -42,7 +42,8 @@ export interface OrderInstance extends Model<OrderAttributes, OrderCreationAttri
 export interface OrderItemAttributes {
     id: number,
     orderId: number,
-    productId: number
+    productId: number,
+    count: number
 }
 export interface OrderItemCreationAttributes extends Optional<OrderItemAttributes, 'id'>{}
 export interface OrderItemInstance extends Model<OrderItemAttributes, OrderItemCreationAttributes>, OrderAttributes{}

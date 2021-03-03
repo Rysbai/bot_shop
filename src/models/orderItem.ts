@@ -23,6 +23,10 @@ export default (sequelize: Sequelize) => {
                 model: Product,
                 key: 'id'
             }
+        },
+        count: {
+            type: DataTypes.INTEGER,
+            defaultValue: 1
         }
     })
 }
