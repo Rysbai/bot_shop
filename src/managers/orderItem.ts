@@ -10,6 +10,11 @@ export class OrderItemManager {
         // @ts-ignore
         return orderItem.toJSON();
     }
+    async filterByOrderId(orderId: number): Promise<Array<OrderItemAttributes>>{
+        const queryset = await this.model.findAll({where: {orderId}});
+        // @ts-ignore
+        return queryset.map((item) => item.toJSON());
+    }
 }
 
 
@@ -17,4 +22,5 @@ export class OrderItemManagerFactory {
     public static create() {
         return new OrderItemManager(OrderItem);
     }
+
 }

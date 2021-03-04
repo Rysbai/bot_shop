@@ -1,9 +1,15 @@
-import {OrderAttributes, OrderCreationAttributes, OrderInstance} from "../models/types";
+import {OrderAttributes, OrderCreationAttributes, OrderInstance, UserCreationAttributes} from "../models/types";
 import {Order} from "../models";
 
 
 export class OrderManager{
     constructor(protected model: typeof Order) {}
+
+    async findById(id: number): Promise<OrderAttributes>{
+        const order = await this.model.findByPk(id);
+        // @ts-ignore
+        return order.toJSON();
+    }
 
     async create(params: OrderCreationAttributes): Promise<OrderAttributes>{
         const order = await this.model.create(params);
@@ -11,10 +17,8 @@ export class OrderManager{
         return order.toJSON();
     }
 
-    async filterUserNotPaidOrders(userId: number): Promise<Array<OrderAttributes>>{
-        const queryset = await this.model.findAll({where: {userId: userId, isPaid: false}});
-        // @ts-ignore
-        return queryset.map((instance) => instance.toJSON());
+    async update(id: number, params: OrderAttributes){
+        await this.model.update(params, {where: {id}});
     }
 }
 

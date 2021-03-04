@@ -4,16 +4,27 @@ import {BotTgContext, HandlerInterface} from "./types";
 import {BasketItemManager, BasketItemManagerFactory} from "../managers/basketItem";
 import {OrderManager, OrderManagerFactory} from "../managers/order";
 import {OrderItemManager, OrderItemManagerFactory} from "../managers/orderItem";
+import {UserManager, UserManagerFactory} from "../managers/user";
+import configs from "../configs";
+import {generateOrderInfo} from "./helpers";
 
-export class Start implements HandlerInterface{
+
+class StartHandler implements HandlerInterface{
+    constructor(protected productListHandler: HandlerInterface) {}
     async execute(ctx: BotTgContext){
-        await ctx.reply('Hello World!');
-        await productListFactory().execute(ctx);
+        const buttons = [
+            [Markup.button.callback('📒 Каталог', 'catalog')],
+            [Markup.button.callback('🛒 Карзина', 'goToBasket')],
+        ]
+        if (ctx.user.tUsername === configs.ADMIN_USERNAME){
+            buttons.push([Markup.button.callback('🆕 Добавить новый товар', 'initNewProduct')]);
+        }
+        await ctx.reply('🏠 Главное меню', Markup.inlineKeyboard(buttons));
     }
 }
 
 
-export class ProductsList implements HandlerInterface{
+class ShowProductListHandler implements HandlerInterface{
     constructor(protected productManager: ProductManager) {}
 
     async execute(ctx: BotTgContext){
@@ -30,7 +41,7 @@ export class ProductsList implements HandlerInterface{
 }
 
 
-export class BasketList implements HandlerInterface {
+class ShowBasketListHandler implements HandlerInterface {
     constructor(protected basketItemManager: BasketItemManager,
                 protected productManager: ProductManager) {
     }
@@ -42,13 +53,8 @@ export class BasketList implements HandlerInterface {
             await ctx.reply('Ваша карзина пуста');
             return
         }
-
-        let text = '';
-        await Promise.all(basketItems.map(async (basketItem) => {
-            const product = await this.productManager.getById(basketItem.productId);
-            text += `<b>${product.name} - ${product.price}</b>\n\n Количество: ${basketItem.count}`;
-        }))
-
+        let text = `<b>Ваша карзина</b>\n\n`;
+        text = await generateOrderInfo(text, basketItems, this.productManager);
         const markup = Markup.inlineKeyboard([
             [Markup.button.callback('Оформить заказ', 'issueOrder')]
         ]);
@@ -56,7 +62,7 @@ export class BasketList implements HandlerInterface {
     }
 }
 
-export class AddToBasket implements HandlerInterface {
+class AddToBasketHandler implements HandlerInterface {
     constructor(protected basketItemManager: BasketItemManager) {}
 
     async execute(ctx: BotTgContext) {
@@ -68,7 +74,7 @@ export class AddToBasket implements HandlerInterface {
     }
 }
 
-export class IssueOrder implements HandlerInterface {
+class IssueOrderHandler implements HandlerInterface {
     constructor(protected basketItemManager: BasketItemManager,
                 protected orderManager: OrderManager,
                 protected orderItemManager: OrderItemManager,
@@ -80,46 +86,119 @@ export class IssueOrder implements HandlerInterface {
         const order = await this.orderManager.create({userId, isPaid: false});
 
         let text = `<b>Ваш заказ #${order.id}</b>\n\n`;
-        await Promise.all(basketItems.map(async ({id, ...item}) => {
-            const product = await this.productManager.getById(item.productId);
-            text += (`${product.name} - $${product.price}\n\nКоличество: ${item.count}\nИтого: $${product.price * item.count}\n` + '-----------------------------------')
+        text = await generateOrderInfo(text, basketItems, this.productManager);
+        await Promise.all(basketItems.map(async (item) => {
             await this.orderItemManager.create({orderId: order.id, ...item});
-        }));
+        }))
 
         await this.basketItemManager.clearUserBasket(userId);
         const markup = Markup.inlineKeyboard([
-            [Markup.button.callback('Оплатить заказ', 'paidOrder')]
+            [Markup.button.callback('Оплатить заказ',
+                JSON.stringify({action: 'payOrder', orderId: order.id}))]
         ]);
-        await ctx.replyWithHTML(text, markup)
+        await ctx.replyWithHTML(text, markup);
+    }
+}
+
+class PayOrderHandler implements HandlerInterface {
+    constructor(protected orderManager: OrderManager,
+                protected userManager: UserManager,
+                protected productManager: ProductManager,
+                protected orderItemManager: OrderItemManager) {}
+
+    async execute(ctx: BotTgContext) {
+        // @ts-ignore
+        const orderId = JSON.parse(ctx.callbackQuery.data).orderId;
+        const order = await this.orderManager.findById(orderId);
+        await this.orderManager.update(orderId, {...order, isPaid: true});
+        await ctx.reply('Ваш заказ успешно оплачен!');
+
+        const admin = await this.userManager.getAdmin();
+        let orderInfo = `Оплачен новый заказ #${order.id} от пользователя @${ctx.user.tUsername}\n\n`;
+        const orderItems = await this.orderItemManager.filterByOrderId(orderId);
+        orderInfo = await generateOrderInfo(orderInfo, orderItems, this.productManager);
+        await ctx.tg.sendMessage(admin.tChatId, orderInfo);
     }
 }
 
 
+class NewProductInitHandler implements HandlerInterface {
+    constructor() {}
 
-export function startFactory(): HandlerInterface {
-    return new Start();
+    async execute(ctx: BotTgContext){
+        if (ctx.user.tUsername === configs.ADMIN_USERNAME){
+            await ctx.reply('Опишите товар в формате:\n\n<Название>\n\n<Описание>\n\n<Цена>');
+        }
+    }
 }
 
-export function productListFactory(): HandlerInterface {
-    const projectManager = ProductManagerFactory.create()
-    return new ProductsList(projectManager);
+
+class NewProductHandler implements HandlerInterface {
+    constructor(protected productManager: ProductManager) {}
+    async execute(ctx: BotTgContext){
+        if (ctx.user.tUsername !== configs.ADMIN_USERNAME){
+            return
+        }
+        // @ts-ignore
+        const params = ctx.message.text.split('\n\n');
+        if (params.length !== 3){
+            await ctx.reply('Не правильный формат данных! Опишите продукт в формате:\n\n<Название>\n\n<Описание>\n\n<Цена>');
+            return
+        }
+        let [name, description, price] = params;
+        price = Number(price);
+        await this.productManager.create({name, description, price});
+        await ctx.reply('Товар успешно создан!')
+    }
 }
 
-export function addToBasketFactory(): HandlerInterface {
+
+export function startHandlerFactory(): HandlerInterface {
+    const productListHandler = productListHandlerFactory();
+    return new StartHandler(productListHandler);
+}
+
+
+export function productListHandlerFactory(): HandlerInterface {
+    const projectManager = ProductManagerFactory.create();
+    return new ShowProductListHandler(projectManager);
+}
+
+export function addToBasketHandlerFactory(): HandlerInterface {
     const basketItemManager = BasketItemManagerFactory.create();
-    return new AddToBasket(basketItemManager,);
+    return new AddToBasketHandler(basketItemManager,);
 }
 
-export function basketListFactory(): HandlerInterface {
+export function basketListHandlerFactory(): HandlerInterface {
     const basketItemManager = BasketItemManagerFactory.create();
     const productManager = ProductManagerFactory.create();
-    return new BasketList(basketItemManager, productManager);
+    return new ShowBasketListHandler(basketItemManager, productManager);
 }
 
-export function issueOrderFactory(): HandlerInterface {
+export function issueOrderHandlerFactory(): HandlerInterface {
     const basketItemManager = BasketItemManagerFactory.create();
     const orderManager = OrderManagerFactory.create();
     const orderItemManager = OrderItemManagerFactory.create();
     const productManager = ProductManagerFactory.create();
-    return new IssueOrder(basketItemManager, orderManager, orderItemManager, productManager);
+    return new IssueOrderHandler(basketItemManager, orderManager, orderItemManager, productManager);
+}
+
+
+export function payOrderHandlerFactory(): HandlerInterface {
+    const orderManager = OrderManagerFactory.create();
+    const userManager = UserManagerFactory.create();
+    const productManager = ProductManagerFactory.create();
+    const orderItemManager = OrderItemManagerFactory.create();
+    return new PayOrderHandler(orderManager, userManager, productManager, orderItemManager);
+}
+
+
+export function initNewProductHandlerFactory(): HandlerInterface {
+    return new NewProductInitHandler();
+}
+
+
+export function newProductHandlerFactory(): HandlerInterface {
+    const productManager =  ProductManagerFactory.create();
+    return new NewProductHandler(productManager);
 }

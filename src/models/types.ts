@@ -2,7 +2,7 @@ import {Model, Optional} from "sequelize";
 
 export interface UserAttributes {
     id: number
-    tUserId: number
+    tChatId: number
     tUsername?: string
 }
 export interface UserCreationAttributes extends Optional<UserAttributes, 'id'>{}

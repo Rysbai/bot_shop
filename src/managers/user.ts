@@ -1,5 +1,6 @@
 import {User} from "../models";
 import {UserAttributes, UserCreationAttributes} from "../models/types";
+import configs from "../configs";
 
 
 export class UserManager{
@@ -15,18 +16,25 @@ export class UserManager{
         return user.toJSON();
     }
 
-    async getByTUserId(tUserId: number): Promise<UserAttributes | undefined> {
-        const user = await this.model.findOne({where: {tUserId}});
+    async getByChatId(tChatId: number): Promise<UserAttributes | undefined> {
+        const user = await this.model.findOne({where: {tChatId}});
         // @ts-ignore
         return user?.toJSON()
     }
 
-    async getByTUserIdOrCreate(tUserId: number, defaults: UserCreationAttributes): Promise<UserAttributes>{
-        const user = await this.getByTUserId(tUserId);
+    async getByChatIdOrCreate(tUserId: number, defaults: UserCreationAttributes): Promise<UserAttributes>{
+        const user = await this.getByChatId(tUserId);
         if (!user){
             return await this.create(defaults);
         }
         return user;
+    }
+
+    async getAdmin(): Promise<UserAttributes>{
+        const user = await this.model.findOne({where: {tUsername: configs.ADMIN_USERNAME}});
+        if (!user) throw 'AdminIsNotRegistered';
+        // @ts-ignore
+        return user.toJSON();
     }
 }
 

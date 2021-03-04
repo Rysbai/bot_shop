@@ -9,7 +9,7 @@ export default (sequelize: Sequelize): ModelDefined<UserAttributes, UserCreation
             autoIncrement: true,
             primaryKey: true
         },
-        tUserId: {
+        tChatId: {
             type: DataTypes.INTEGER,
             allowNull: false,
             unique: true
