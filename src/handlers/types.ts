@@ -1,6 +1,5 @@
 import {Context} from "telegraf";
-import {UserAttributes, UserCreationAttributes} from "../models/types";
-import {Model} from "sequelize";
+import {UserAttributes} from "../models/types";
 
 export interface BotTgContext extends Context{
     user: UserAttributes
@@ -8,9 +7,4 @@ export interface BotTgContext extends Context{
 
 export interface HandlerInterface{
     execute: (ctx: BotTgContext) => void
-}
-
-
-export interface HandlerFactoryInterface {
-    create:  () => HandlerInterface
 }

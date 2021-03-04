@@ -1,6 +1,5 @@
 import {Product} from "../models";
 import {ProductAttributes, ProductCreationAttributes} from "../models/types";
-import {resourceLimits} from "worker_threads";
 
 
 export class ProductManager{
@@ -22,7 +21,7 @@ export class ProductManager{
         return product.toJSON();
     }
 
-    async allWithLimit(limit: number = 10, offset: number = 0): Promise<Array<ProductAttributes>>{
+    async allWithLimit(limit: number = 10): Promise<Array<ProductAttributes>>{
         const queryset = await this.model.findAll({limit: limit});
         // @ts-ignore
         return queryset.map((instance) => instance.toJSON());
