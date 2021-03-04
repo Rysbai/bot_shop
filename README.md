@@ -1,3 +1,7 @@
+# Dependencies
+* Postgresql >= 10.x
+* Node >= 12.x
+
 # Setup instructions
 
 * Install dependencies: `npm i`
